@@ -18,6 +18,7 @@
         </div>
       </div>
     </div>
+    <div id="legend"></div>
     <script type="text/javascript">
 
 var paddingBottom = 20;
@@ -131,10 +132,26 @@ var start = function() {
     .style("stroke-opacity", 1e-6);
 
   // create the legend on the side of the page
-  // createLegend()
+  createLegend()
 
   // default to streamgraph display
   streamgraph();
+
+  // This sets up the zoom so we can pan and zoom on the x-axis
+  var rect = svg.append("svg:rect")
+    .attr("class", "pane")
+    .attr("width", width)
+    .attr("height", height);
+
+  rect.call(d3.behavior.zoom().x(x)
+    .on('zoom', function() {
+      svg.select("g.x.axis").call(xAxis);
+      svg.selectAll('path.area')
+         .attr('d', function(d) { return area(d.values);});
+      svg.selectAll('path.line')
+         .attr('d', function(d) { return line(d.values);});
+  }));
+
 }
 
 var streamgraph = function() {
@@ -187,18 +204,7 @@ var streamgraph = function() {
     .style("stroke-opacity", 1e-6)
     .attr("d", function(d) { return line(d.values); });
 
-  // This sets up the zoom so we can pan and zoom on the x-axis
-  var rect = svg.append("svg:rect")
-    .attr("class", "pane")
-    .attr("width", width)
-    .attr("height", height);
 
-  rect.call(d3.behavior.zoom().x(x)
-    .on('zoom', function() {
-      svg.select("g.x.axis").call(xAxis);
-      svg.selectAll('path.area')
-         .attr('d', function(d) { return area(d.values);});
-    }));
 }
 
 var stackedareas = function() {
@@ -251,18 +257,6 @@ var stackedareas = function() {
     .style("stroke-opacity", 1e-6)
     .attr("d", function(d) { return line(d.values); });
 
-  // This sets up the zoom so we can pan and zoom on the x-axis
-  var rect = svg.append("svg:rect")
-    .attr("class", "pane")
-    .attr("width", width)
-    .attr("height", height);
-
-  rect.call(d3.behavior.zoom().x(x)
-    .on('zoom', function() {
-      svg.select("g.x.axis").call(xAxis);
-      svg.selectAll('path.area')
-         .attr('d', function(d) { return area(d.values);});
-    }));
 }
 
 var areas = function() {
@@ -305,26 +299,77 @@ var areas = function() {
   // here we finally show the line 
   // that serves as a nice border at the
   // top of our areas
-  t.select("path.line")
-    .style("stroke-opacity", 1)
-    .attr("d", function(d) { return line(d.values); });
-
-  // This sets up the zoom so we can pan and zoom on the x-axis
-  var rect = svg.append("svg:rect")
-    .attr("class", "pane")
-    .attr("width", width)
-    .attr("height", height);
-
-  rect.call(d3.behavior.zoom().x(x)
-    .on('zoom', function() {
-      svg.select("g.x.axis").call(xAxis);
-      svg.selectAll('path.area')
-         .attr('d', function(d) { return area(d.values);});
-      svg.selectAll('path.line')
-         .attr('d', function(d) { return line(d.values);});
-    }));
+  // t.select("path.line")
+  //   .style("stroke-opacity", 1)
+  //   .attr("d", function(d) { return line(d.values); });
 
 }
+
+// ---
+// Called on legend mouse over. Shows the legend
+// ---
+var showLegend = function(d,i) {
+  d3.select("#legend svg g.panel")
+    .transition()
+    .duration(500)
+    .attr("transform", "translate(0,0)");
+}
+
+// ---
+// Called on legend mouse out. Hides the legend
+// ---
+var hideLegend = function(d,i) {
+  d3.select("#legend svg g.panel")
+    .transition()
+    .duration(500)
+    .attr("transform", "translate(165,0)");
+};
+
+// ---
+// Helper function that creates the 
+// legend sidebar.
+// ---
+var createLegend = function() {
+  var legendWidth = 200;
+  var legendHeight = 245;
+  var legend = d3.select("#legend").append("svg")
+    .attr("width", legendWidth)
+    .attr("height", legendHeight);
+
+  var legendG = legend.append("g")
+    .attr("transform", "translate(165,0)")
+    .attr("class", "panel");
+
+  legendG.append("rect")
+    .attr("width", legendWidth)
+    .attr("height", legendHeight)
+    .attr("rx", 4)
+    .attr("ry", 4)
+    .attr("fill-opacity", 0.5)
+    .attr("fill", "white");
+
+  legendG.on("mouseover", showLegend)
+    .on("mouseout", hideLegend);
+
+  var keys = legendG.selectAll("g")
+    .data(data)
+    .enter().append("g")
+    .attr("transform", function(d,i) { return "translate(#{5},#{10 + 40 * (i + 0)})"; });
+
+  keys.append("rect")
+    .attr("width", 30)
+    .attr("height", 30)
+    .attr("rx", 4)
+    .attr("ry", 4)
+    .attr("fill", function(d) { return color(d.key); });
+
+  keys.append("text")
+    .text(function(d) { return d.key; })
+    .attr("text-anchor", "left")
+    .attr("dx", "2.3em")
+    .attr("dy", "1.3em");
+  
+};
 
 
 var display = function(error, rawData) {
