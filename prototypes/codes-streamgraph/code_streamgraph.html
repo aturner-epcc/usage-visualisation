@@ -11,6 +11,11 @@
       <div id="footer">
         <span>…</span>
         <div class="hint">mousewheel to zoom, drag to pan</div>
+        <div class="btn-group" data-toggle="buttons-radio">
+          <button type="button" id="stream" class="btn active switch">Streamgraph</button>
+          <button type="button" id="stack" class="btn switch">Stacked Area</button>
+          <button type="button" id="area" class="btn switch">Area</button>
+        </div>
       </div>
     </div>
     <script type="text/javascript">
@@ -26,7 +31,7 @@ var x = d3.time.scale()
 var y = d3.scale.linear()
   .range([height, 0]);
 
-var color = d3.scale.category20();
+var color = d3.scale.category10();
 
 var area = d3.svg.area()
     .interpolate("basis")
@@ -53,6 +58,17 @@ var data = null
 var svg = d3.select("#vis").append("svg")
             .attr("width", width)
             .attr("height", height + paddingBottom);
+
+var transitionTo = function(name) {
+  if (name === "stream") {
+    streamgraph();
+  } else if (name === "stack") {
+    stackedareas();
+  } else if (name === "area") {
+    areas();
+  }
+}
+
 
 var start = function() {
 
@@ -171,7 +187,7 @@ var streamgraph = function() {
     .style("stroke-opacity", 1e-6)
     .attr("d", function(d) { return line(d.values); });
 
-  // Try to set up zoom
+  // This sets up the zoom so we can pan and zoom on the x-axis
   var rect = svg.append("svg:rect")
     .attr("class", "pane")
     .attr("width", width)
@@ -184,6 +200,132 @@ var streamgraph = function() {
          .attr('d', function(d) { return area(d.values);});
     }));
 }
+
+var stackedareas = function() {
+  // 'wiggle' is the offset to use 
+  // for streamgraphs.
+  stack.offset("zero");
+
+  // the stack layout will set the count0 attribute
+  // of our data
+  stack(data);
+
+  // reset our y domain and range so that it 
+  // accommodates the highest value + offset
+  y.domain([0, d3.max(data[0].values.map(function(d) { return d.count0 + d.count; }))])
+    .range([height, 0]);
+
+  // the line will be placed along the 
+  // baseline of the streams, but will
+  // be faded away by the transition below.
+  // this positioning is just for smooth transitioning
+  // from the area chart
+  line.y(function(d) { return y(d.count0);});
+
+  // setup the area generator to utilize
+  // the count0 values created from the stack
+  // layout
+  area.y0(function(d) { return y(d.count0); })
+      .y1(function(d) { return y(d.count0 + d.count); });
+
+  // here we create the transition
+  // and modify the area and line for
+  // each request group through postselection
+  var t = svg.selectAll(".request")
+    .transition()
+    .duration(duration);
+ 
+  // D3 will take care of the details of transitioning
+  // between the current state of the elements and
+  // this new line path and opacity.
+  t.select("path.area")
+    .style("fill-opacity", 1.0)
+    .attr("d", function(d) { return area(d.values);} );
+
+  // 1e-6 is the smallest number in JS that
+  // won't get converted to scientific notation. 
+  // as scientific notation is not supported by CSS,
+  // we need to use this as the low value so that the 
+  // line doesn't reappear due to an invalid number.
+  t.select("path.line")
+    .style("stroke-opacity", 1e-6)
+    .attr("d", function(d) { return line(d.values); });
+
+  // This sets up the zoom so we can pan and zoom on the x-axis
+  var rect = svg.append("svg:rect")
+    .attr("class", "pane")
+    .attr("width", width)
+    .attr("height", height);
+
+  rect.call(d3.behavior.zoom().x(x)
+    .on('zoom', function() {
+      svg.select("g.x.axis").call(xAxis);
+      svg.selectAll('path.area')
+         .attr('d', function(d) { return area(d.values);});
+    }));
+}
+
+var areas = function() {
+  var g = svg.selectAll(".request");
+
+  // set the starting position of the border
+  // line to be on the top part of the areas.
+  // then it is immediately hidden so that it
+  // can fade in during the transition below
+  line.y(function(d) { return y(d.count0 + d.count); });
+  g.select("path.line")
+    .attr("d", function(d) { return line(d.values); })
+    .style("stroke-opacity", 1e-6);
+
+ 
+  // as there is no stacking in this chart, the maximum
+  // value of the input domain is simply the maximum count value,
+  // which we precomputed in the display function 
+  y.domain([0, d3.max(data.map(function(d) { return d.maxCount; } ))])
+    .range([height, 0]);
+
+  // the baseline of this chart will always
+  // be at the bottom of the display, so we
+  // can set y0 to a constant.
+  area.y0(height)
+      .y1(function(d) { return y(d.count); });
+
+  line.y(function(d) { return y(d.count); });
+
+  var t = g.transition()
+    .duration(duration)
+
+  // transition the areas to be 
+  // partially transparent so that the
+  // overlap is better understood.
+  t.select("path.area")
+    .style("fill-opacity", 0.5)
+    .attr("d", function(d) { return area(d.values); });
+
+  // here we finally show the line 
+  // that serves as a nice border at the
+  // top of our areas
+  t.select("path.line")
+    .style("stroke-opacity", 1)
+    .attr("d", function(d) { return line(d.values); });
+
+  // This sets up the zoom so we can pan and zoom on the x-axis
+  var rect = svg.append("svg:rect")
+    .attr("class", "pane")
+    .attr("width", width)
+    .attr("height", height);
+
+  rect.call(d3.behavior.zoom().x(x)
+    .on('zoom', function() {
+      svg.select("g.x.axis").call(xAxis);
+      svg.selectAll('path.area')
+         .attr('d', function(d) { return area(d.values);});
+      svg.selectAll('path.line')
+         .attr('d', function(d) { return line(d.values);});
+    }));
+
+}
+
 
 var display = function(error, rawData) {
 
@@ -207,13 +349,19 @@ var display = function(error, rawData) {
     s.maxCount = d3.max(s.values, function(d) { return d.count; });
   });
 
-  data.sort(function(a,b) { return b.maxCount - a.maxCount; });
+//  data.sort(function(a,b) { return b.maxCount - a.maxCount; });
 
   start();
 }
 
 $(document).ready(function() {
-   d3.json("data/d3codes_time_other.json", display);
+   d3.selectAll(".switch").on("click", function(d) {
+    d3.event.preventDefault();
+    var id = d3.select(this).attr("id");
+    transitionTo(id);
+   });
+
+   d3.json("data/d3codes_time_10.json", display);
 });
 
     </script>
