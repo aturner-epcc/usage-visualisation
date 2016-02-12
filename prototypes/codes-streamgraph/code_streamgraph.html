@@ -45,8 +45,8 @@ var stack = d3.layout.stack()
 
 var xAxis = d3.svg.axis()
      .scale(x)
-     .tickSize(-height)
-     .tickFormat(d3.time.format('%a %d'));
+     .tickSize(-height);
+//     .tickFormat(d3.time.format('%a %d'));
 
 var data = null
 
@@ -68,15 +68,15 @@ var start = function() {
   // here I extract out every other day - and 
   // manually specify these values as the tick 
   // values
-  dates = data[0].values.map(function(v) { return v.date; });
-  index = 0;
-  dates = dates.filter(function(d) {
-    index += 1;
-    return (index % 2) === 0;
-  });
+  // dates = data[0].values.map(function(v) { return v.date; });
+  // index = 0;
+  // dates = dates.filter(function(d) {
+  //   index += 1;
+  //   return (index % 2) === 0;
+  // });
 
 
-  xAxis.tickValues(dates);
+  // xAxis.tickValues(dates);
 
   // the axis lines will go behind
   // the rest of the display, so create
@@ -170,6 +170,19 @@ var streamgraph = function() {
   t.select("path.line")
     .style("stroke-opacity", 1e-6)
     .attr("d", function(d) { return line(d.values); });
+
+  // Try to set up zoom
+  var rect = svg.append("svg:rect")
+    .attr("class", "pane")
+    .attr("width", width)
+    .attr("height", height);
+
+  rect.call(d3.behavior.zoom().x(x)
+    .on('zoom', function() {
+      svg.select("g.x.axis").call(xAxis);
+      svg.selectAll('path.area')
+         .attr('d', function(d) { return area(d.values);});
+    }));
 }
 
 var display = function(error, rawData) {
@@ -179,7 +192,8 @@ var display = function(error, rawData) {
   console.log(rawData);
 
   // a parser to convert our date string into a JS time object.
-  var parseTime = d3.time.format.utc("%x").parse
+  // var parseTime = d3.time.format.utc("%x").parse
+  var parseTime = d3.time.format("%Y-%m-%d %H:%M:%S").parse
 
   // go through each data entry and set its
   // date and count property
@@ -199,7 +213,7 @@ var display = function(error, rawData) {
 }
 
 $(document).ready(function() {
-   d3.json("data/d3codes_timeline.json", display);
+   d3.json("data/d3codes_time_other.json", display);
 });
 
     </script>

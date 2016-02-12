@@ -51,5 +51,10 @@ footer p {
   z-index: 100000;
   overflow: visible;
 }
+rect.pane {
+  cursor: move;
+  fill: none;
+  pointer-events: all;
+}
 
 
