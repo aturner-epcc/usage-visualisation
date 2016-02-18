@@ -331,7 +331,7 @@ var hideLegend = function(d,i) {
 // ---
 var createLegend = function() {
   var legendWidth = 200;
-  var legendHeight = 245;
+  var legendHeight = height;
   var legend = d3.select("#legend").append("svg")
     .attr("width", legendWidth)
     .attr("height", legendHeight);
@@ -354,7 +354,9 @@ var createLegend = function() {
   var keys = legendG.selectAll("g")
     .data(data)
     .enter().append("g")
-    .attr("transform", function(d,i) { return "translate(#{5},#{10 + 40 * (i + 0)})"; });
+    .attr("transform", function(d,i) { 
+        return "translate(5," + (10 + 40*i) + ")";
+    });
 
   keys.append("rect")
     .attr("width", 30)

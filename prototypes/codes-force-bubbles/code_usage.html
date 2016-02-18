@@ -22,7 +22,21 @@
     </style>
   </head>
   <body>
-    <div class="btn-group" data-toggle="buttons" style="margin-right: auto; margin-left: auto;">
+    <h2>Application usage over past month</h2>
+
+    <p>This page shows the usage broken down by application over the last month. 
+    If you have JavaScript enabled, you will be able to use an interactive visualisation
+    to explore the data; otherwise you will just see a table listing the application
+    usage statistics.</p>
+
+       <p class="visdesc" style="display: none">In the visualisation below, each bubble represents a particular application. The
+       radius is proportional the the total amount of time used by that application over the
+       past month and the colour represents the number of unique users of that application.
+       If you hover over a particular bubble, you will see the application name and the numerical
+       values associaed with that application's usage. Clicking the buttons across to the top
+       allows you to categorise the applications by different criteria.</p>
+
+    <div class="btn-group" data-toggle="buttons" style="display: none;">
       <label class="btn btn-danger" id="none">
         <input type="radio" name="options"> Overview
       </label>
@@ -54,25 +68,26 @@
         var radius_scale = d3.scale.pow().exponent(0.5).domain([0, max_usage]).range([2, 50]);
 
         // Define the size of the chart box
-        var width = 700, height = 800;
+        var width = 700, height = 700;
+
 
         var userCat = [
-                 { label: "Less than 5 users", count: 5 },
-                 { label: "5-10 users", count: 10 },
-                 { label: "10-20 users", count: 20 },
-                 { label: "20-50 users", count: 50 },
-                 { label: "50-100 users", count: 100 },
-                 { label: "More than 100 users", count: 5000 }
+                       { label: "Less than 5 users", count: 5, fill: "#fee5d9" },
+                       { label: "5-10 users", count: 10, fill: "#fcbba1" },
+                       { label: "10-20 users", count: 20, fill: "#fc9272" },
+                       { label: "20-50 users", count: 50, fill: "#fb6a4a" },
+                       { label: "50-100 users", count: 100, fill: "#de2d26" },
+                       { label: "More than 100 users", count: 5000, fill: "#a50f15" }
         ];
 
         // Define a custom colour scale
         var fill = d3.scale.ordinal().range([
-                                       "#a50f15",
-                                       "#de2d26",
-                                       "#fc9272",
-                                       "#fb6a4a",
-                                       "#fcbba1",
-                                       "#fee5d9"
+                                             "#a50f15",
+                                             "#de2d26",
+                                             "#fb6a4a",
+                                             "#fc9272",
+                                             "#fcbba1",
+                                             "#fee5d9"
                                     ]);
 
         // Setup the SVG chart area
@@ -85,7 +100,6 @@
         for (var j = 0; j < data.length; j++) {
           if (parseInt(data[j].Usage) < 10) {
              // If we have very low usage cull from the data
-             console.log("Splicing " + data[j].Code);
              data.splice(j, 1);
              // Indexing has chaged, make sure we don't miss any elements
              j--;
@@ -97,17 +111,17 @@
              // Create category for number of users
              nuser = parseInt(data[j].Users);
              if (nuser < 5) {
-                data[j].UserLevel = userCat[0].label;
+                data[j].UserLevel = userCat[0].fill;
              } else if (nuser < 10) {
-                data[j].UserLevel = userCat[1].label;
+                data[j].UserLevel = userCat[1].fill;
              } else if (nuser < 20) {
-                data[j].UserLevel = userCat[2].label;
+                data[j].UserLevel = userCat[2].fill;
              } else if (nuser < 50) {
-                data[j].UserLevel = userCat[3].label;
+                data[j].UserLevel = userCat[3].fill;
              } else if (nuser < 100) {
-                data[j].UserLevel = userCat[4].label;
+                data[j].UserLevel = userCat[4].fill;
              } else {
-                data[j].UserLevel = userCat[5].label;
+                data[j].UserLevel = userCat[5].fill;
              }
           }
         }
@@ -144,10 +158,19 @@
           .attr("cy", function (d) { return d.y; })
           .attr("r", function (d) { return d.radius; })
           .style("fill", function (d) { return d3.rgb(fill(d.UserLevel)); })
+          .attr("data-legend", function (d) { return d.Code; })
+          .style("fill", function (d) { return d.UserLevel; })
+          .style("stroke", "#333")
+          .style("stroke-width", "2px")
           .on("mouseover", function (d) { showPopover.call(this, d); })
-          .on("mouseout", function (d) { removePopovers(); })
+          .on("mouseout", function (d) { removePopovers(); });
 
         var force = d3.layout.force();
+
+        d3.select(".visdesc")
+           .style("display", "block");
+        d3.select(".btn-group")
+           .style("display", "block");
 
         // Setup legend
         var lwidth = width;
@@ -233,7 +256,7 @@
           .attr("class", "label")
           .text(function (d) { return d.name })
           .attr("transform", function (d) {
-            return "translate(" + (d.x + (d.dx / 3)) + ", " + (d.y + 20) + ")";
+            return "translate(" + (d.x + (d.dx / 6)) + ", " + (d.y + 20) + ")";
           });
         }
 
