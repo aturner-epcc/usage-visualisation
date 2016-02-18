@@ -165,6 +165,7 @@
           .on("mouseover", function (d) { showPopover.call(this, d); })
           .on("mouseout", function (d) { removePopovers(); });
 
+        // Force layout so we can shift bubble positions
         var force = d3.layout.force();
 
         d3.select(".visdesc")
@@ -279,6 +280,8 @@
           });
           $(this).popover('show')
         }
+
+        // Popup for the the legend
         function showLegPopover (d) {
           $(this).popover({
             placement: 'auto bottom',

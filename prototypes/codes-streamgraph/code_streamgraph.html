@@ -21,27 +21,27 @@
     <div id="legend"></div>
     <script type="text/javascript">
 
+// Basic dimensions
 var paddingBottom = 20;
 var width = 880;
 var height = 600 - paddingBottom;
 var duration = 750;
 
+// Set up the x and y scales
 var x = d3.time.scale()
   .range([0, width]);
-
 var y = d3.scale.linear()
   .range([height, 0]);
 
+// Colour scales
 var color = d3.scale.category10();
 
+// Areas for plots
 var area = d3.svg.area()
     .interpolate("basis")
     .x(function(d) { return x(d.date); });
 
-var line = d3.svg.line()
-    .interpolate("basis")
-    .x(function(d) { return x(d.date); });
-
+// Stack layout for stacked areas
 var stack = d3.layout.stack()
   .values(function(d) { return d.values; })
   .x(function(d) { return d.date; })
@@ -49,17 +49,18 @@ var stack = d3.layout.stack()
   .out(function(d,y0,y) { return (d.count0 = y0) === 0; })
   .order("reverse");
 
+// Time x-axis 
 var xAxis = d3.svg.axis()
      .scale(x)
      .tickSize(-height);
-//     .tickFormat(d3.time.format('%a %d'));
 
+// Basic setup
 var data = null
-
 var svg = d3.select("#vis").append("svg")
             .attr("width", width)
             .attr("height", height + paddingBottom);
 
+// Function to switch between different data views
 var transitionTo = function(name) {
   if (name === "stream") {
     streamgraph();
@@ -70,30 +71,13 @@ var transitionTo = function(name) {
   }
 }
 
-
 var start = function() {
 
-  // first, lets setup our x scale domain
+  // first, setup our x scale domain
   // this assumes that the dates in our data are in order
   var minDate = d3.min(data, function(d) { return d.values[0].date;});
   var maxDate = d3.max(data, function(d) { return d.values[d.values.length - 1].date;});
   x.domain([minDate, maxDate]);
-
-  // D3's axis functionality usually works great
-  // however, I was having some aesthetic issues
-  // with the tick placement
-  // here I extract out every other day - and 
-  // manually specify these values as the tick 
-  // values
-  // dates = data[0].values.map(function(v) { return v.date; });
-  // index = 0;
-  // dates = dates.filter(function(d) {
-  //   index += 1;
-  //   return (index % 2) === 0;
-  // });
-
-
-  // xAxis.tickValues(dates);
 
   // the axis lines will go behind
   // the rest of the display, so create
@@ -127,10 +111,6 @@ var start = function() {
     .style("fill", function(d) { return color(d.key);})
     .attr("d", function(d) { return area(d.values);});
 
-  requests.append("path")
-    .attr("class", "line")
-    .style("stroke-opacity", 1e-6);
-
   // create the legend on the side of the page
   createLegend()
 
@@ -148,8 +128,6 @@ var start = function() {
       svg.select("g.x.axis").call(xAxis);
       svg.selectAll('path.area')
          .attr('d', function(d) { return area(d.values);});
-      svg.selectAll('path.line')
-         .attr('d', function(d) { return line(d.values);});
   }));
 
 }
@@ -167,13 +145,6 @@ var streamgraph = function() {
   // accommodates the highest value + offset
   y.domain([0, d3.max(data[0].values.map(function(d) { return d.count0 + d.count; }))])
     .range([height, 0]);
-
-  // the line will be placed along the 
-  // baseline of the streams, but will
-  // be faded away by the transition below.
-  // this positioning is just for smooth transitioning
-  // from the area chart
-  line.y(function(d) { return y(d.count0);});
 
   // setup the area generator to utilize
   // the count0 values created from the stack
@@ -195,21 +166,11 @@ var streamgraph = function() {
     .style("fill-opacity", 1.0)
     .attr("d", function(d) { return area(d.values);} );
 
-  // 1e-6 is the smallest number in JS that
-  // won't get converted to scientific notation. 
-  // as scientific notation is not supported by CSS,
-  // we need to use this as the low value so that the 
-  // line doesn't reappear due to an invalid number.
-  t.select("path.line")
-    .style("stroke-opacity", 1e-6)
-    .attr("d", function(d) { return line(d.values); });
-
-
 }
 
 var stackedareas = function() {
-  // 'wiggle' is the offset to use 
-  // for streamgraphs.
+  // 'zero' is the offset to use 
+  // for stacked areas.
   stack.offset("zero");
 
   // the stack layout will set the count0 attribute
@@ -220,13 +181,6 @@ var stackedareas = function() {
   // accommodates the highest value + offset
   y.domain([0, d3.max(data[0].values.map(function(d) { return d.count0 + d.count; }))])
     .range([height, 0]);
-
-  // the line will be placed along the 
-  // baseline of the streams, but will
-  // be faded away by the transition below.
-  // this positioning is just for smooth transitioning
-  // from the area chart
-  line.y(function(d) { return y(d.count0);});
 
   // setup the area generator to utilize
   // the count0 values created from the stack
@@ -248,30 +202,11 @@ var stackedareas = function() {
     .style("fill-opacity", 1.0)
     .attr("d", function(d) { return area(d.values);} );
 
-  // 1e-6 is the smallest number in JS that
-  // won't get converted to scientific notation. 
-  // as scientific notation is not supported by CSS,
-  // we need to use this as the low value so that the 
-  // line doesn't reappear due to an invalid number.
-  t.select("path.line")
-    .style("stroke-opacity", 1e-6)
-    .attr("d", function(d) { return line(d.values); });
-
 }
 
 var areas = function() {
   var g = svg.selectAll(".request");
 
-  // set the starting position of the border
-  // line to be on the top part of the areas.
-  // then it is immediately hidden so that it
-  // can fade in during the transition below
-  line.y(function(d) { return y(d.count0 + d.count); });
-  g.select("path.line")
-    .attr("d", function(d) { return line(d.values); })
-    .style("stroke-opacity", 1e-6);
-
- 
   // as there is no stacking in this chart, the maximum
   // value of the input domain is simply the maximum count value,
   // which we precomputed in the display function 
@@ -284,8 +219,6 @@ var areas = function() {
   area.y0(height)
       .y1(function(d) { return y(d.count); });
 
-  line.y(function(d) { return y(d.count); });
-
   var t = g.transition()
     .duration(duration)
 
@@ -295,13 +228,6 @@ var areas = function() {
   t.select("path.area")
     .style("fill-opacity", 0.5)
     .attr("d", function(d) { return area(d.values); });
-
-  // here we finally show the line 
-  // that serves as a nice border at the
-  // top of our areas
-  // t.select("path.line")
-  //   .style("stroke-opacity", 1)
-  //   .attr("d", function(d) { return line(d.values); });
 
 }
 
@@ -351,6 +277,7 @@ var createLegend = function() {
   legendG.on("mouseover", showLegend)
     .on("mouseout", hideLegend);
 
+  // Add a legend item for each dataset
   var keys = legendG.selectAll("g")
     .data(data)
     .enter().append("g")
@@ -374,6 +301,7 @@ var createLegend = function() {
 };
 
 
+// Read and setup the dataset
 var display = function(error, rawData) {
 
   data = rawData;
@@ -396,11 +324,10 @@ var display = function(error, rawData) {
     s.maxCount = d3.max(s.values, function(d) { return d.count; });
   });
 
-//  data.sort(function(a,b) { return b.maxCount - a.maxCount; });
-
   start();
 }
 
+// Load and run visualisation once page is loaded
 $(document).ready(function() {
    d3.selectAll(".switch").on("click", function(d) {
     d3.event.preventDefault();
